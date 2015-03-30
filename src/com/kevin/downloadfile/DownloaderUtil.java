@@ -3,6 +3,11 @@ package com.kevin.downloadfile;
 import java.util.HashMap;
 import java.util.Set;
 
+/**
+ * 
+ * @author Kevin
+ * @data 2015/3/30
+ */
 public class DownloaderUtil {
 
 	public static String formatRequestParam(HashMap<String, String> param) {

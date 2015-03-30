@@ -14,32 +14,33 @@ import android.os.Build;
  */
 public class DownloadFileHelper {
 
-	ExecutorService cachedThreadPool = Executors.newCachedThreadPool();
-	private Downloader mDownloader;
+    ExecutorService cachedThreadPool = Executors.newCachedThreadPool();
+    private Downloader mDownloader;
 
-	public DownloadFileHelper() {
+    public DownloadFileHelper() {
 
-		if (Build.VERSION.SDK_INT > 9) {
-			mDownloader = new UrlDownloader();
-		} else {
-			mDownloader = new HttpClientDownloader();
-		}
+        if (Build.VERSION.SDK_INT > 9) {
+            mDownloader = new UrlDownloader();
+        } else {
+            mDownloader = new HttpClientDownloader();
+        }
 
-	}
+    }
 
-	public void download(final int method, final String url,
-			final HashMap<String, String> header,
-			final HashMap<String, String> param, final String dir,
-			final String fileName, final OnDownloadListener listener) {
+    public void download(final int method, final String url,
+            final HashMap<String, String> header,
+            final HashMap<String, String> param, final String dir,
+            final String fileName, final OnDownloadListener listener,
+            final OnDownloadError error) {
 
-		cachedThreadPool.execute(new Runnable() {
+        cachedThreadPool.execute(new Runnable() {
 
-			@Override
-			public void run() {
-				mDownloader.performDownload(method, url, header, param, dir,
-						fileName, listener);
-			}
-		});
+            @Override
+            public void run() {
+                mDownloader.performDownload(method, url, header, param, dir,
+                        fileName, listener, error);
+            }
+        });
 
-	}
+    }
 }

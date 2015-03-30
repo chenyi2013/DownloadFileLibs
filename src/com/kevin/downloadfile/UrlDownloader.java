@@ -7,6 +7,7 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
+import java.net.SocketTimeoutException;
 import java.net.URL;
 import java.util.HashMap;
 import java.util.Set;
@@ -19,113 +20,128 @@ import java.util.Set;
  */
 public class UrlDownloader implements Downloader {
 
-	@Override
-	public void performDownload(int method, String path,
-			HashMap<String, String> header, HashMap<String, String> param,
-			String dir, String fileName, OnDownloadListener listener) {
+    @Override
+    public void performDownload(int method, String path,
+            HashMap<String, String> header, HashMap<String, String> param,
+            String dir, String fileName, OnDownloadListener listener,
+            OnDownloadError error) {
 
-		File dirFile = new File(dir);
+        File dirFile = new File(dir);
 
-		if (!dirFile.exists()) {
-			dirFile.mkdirs();
-		}
+        if (!dirFile.exists()) {
+            dirFile.mkdirs();
+        }
 
-		File file = new File(dir + File.separator + fileName);
+        File file = new File(dir + File.separator + fileName);
 
-		OutputStream out = null;
-		InputStream in = null;
+        OutputStream out = null;
+        InputStream in = null;
 
-		int totalLength = 0;
-		int currentLength = 0;
-		double progress;
+        int totalLength = 0;
+        int currentLength = 0;
+        double progress;
 
-		try {
+        HttpURLConnection conn = null;
 
-			URL url = null;
+        try {
 
-			String sp = DownloaderUtil.formatRequestParam(param);
+            URL url = null;
 
-			if (sp != null && method == GET) {
-				url = new URL(path + "?" + sp);
-			} else {
-				url = new URL(path);
-			}
+            String sp = DownloaderUtil.formatRequestParam(param);
 
-			HttpURLConnection conn = (HttpURLConnection) url.openConnection();
-			conn.setDoInput(true);
-			conn.setDoOutput(true);
-			byte[] data = null;
+            if (sp != null && method == GET) {
+                url = new URL(path + "?" + sp);
+            } else {
+                url = new URL(path);
+            }
 
-			if (method == POST) {
-				conn.setRequestMethod("POST");
+            conn = (HttpURLConnection) url.openConnection();
+            conn.setDoInput(true);
+            conn.setDoOutput(true);
+            conn.setUseCaches(false);
+            conn.setReadTimeout(5000);
+            conn.setConnectTimeout(5000);
+            byte[] data = null;
 
-				if (sp != null) {
-					data = sp.getBytes();
-				}
-				conn.setRequestProperty("Content-Length",
-						String.valueOf(data.length));
-			} else {
-				conn.setRequestMethod("GET");
-			}
+            if (method == POST) {
+                conn.setRequestMethod("POST");
 
-			if (header != null) {
-				Set<String> set = header.keySet();
-				for (String key : set) {
-					conn.setRequestProperty(key, header.get(key));
-				}
-			}
+                if (sp != null) {
+                    data = sp.getBytes();
+                }
+                conn.setRequestProperty("Content-Length",
+                        String.valueOf(data.length));
+            } else {
+                conn.setRequestMethod("GET");
+            }
 
-			if (conn.getResponseCode() == HttpURLConnection.HTTP_OK) {
+            if (header != null) {
+                Set<String> set = header.keySet();
+                for (String key : set) {
+                    conn.setRequestProperty(key, header.get(key));
+                }
+            }
 
-				if (method == POST) {
-					OutputStream outputStream = conn.getOutputStream();
-					outputStream.write(data);
-					outputStream.close();
-				}
+            if (conn.getResponseCode() == HttpURLConnection.HTTP_OK) {
 
-				in = conn.getInputStream();
-				totalLength = conn.getContentLength();
-				out = new FileOutputStream(file);
+                if (method == POST) {
+                    OutputStream outputStream = conn.getOutputStream();
+                    outputStream.write(data);
+                    outputStream.close();
+                }
 
-				int len = -1;
-				byte b[] = new byte[1024];
+                in = conn.getInputStream();
+                totalLength = conn.getContentLength();
+                out = new FileOutputStream(file);
 
-				while ((len = in.read(b)) > 0) {
+                int len = -1;
+                byte b[] = new byte[1024];
 
-					out.write(b, 0, len);
+                while ((len = in.read(b)) > 0) {
 
-					if (listener != null) {
-						currentLength = len + currentLength;
-						progress = currentLength / (totalLength * 1.0);
-						listener.progress(progress, path);
-					}
+                    out.write(b, 0, len);
 
-				}
+                    if (listener != null) {
+                        currentLength = len + currentLength;
+                        progress = currentLength / (totalLength * 1.0);
+                        listener.progress(progress, path);
+                    }
 
-			}
-			conn.disconnect();
+                }
 
-		} catch (MalformedURLException e) {
+            }
 
-			e.printStackTrace();
-		} catch (IOException e) {
-			e.printStackTrace();
-		} finally {
+        } catch (MalformedURLException e) {
 
-			try {
-				if (in != null) {
-					in.close();
-				}
+            e.printStackTrace();
+            if (error != null) {
+                error.Error(path, e.getMessage());
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+            if (error != null) {
+                error.Error(path, e.getMessage());
+            }
+        } finally {
 
-				if (out != null) {
-					out.close();
-				}
-			} catch (IOException e) {
-				e.printStackTrace();
+            try {
+                if (in != null) {
+                    in.close();
+                }
 
-			}
+                if (out != null) {
+                    out.close();
+                }
 
-		}
+                if (conn != null) {
+                    conn.disconnect();
+                }
+            } catch (IOException e) {
+                e.printStackTrace();
 
-	}
+            }
+
+        }
+
+    }
 }
