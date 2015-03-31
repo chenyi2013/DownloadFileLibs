@@ -29,144 +29,149 @@ import org.apache.http.params.CoreConnectionPNames;
  */
 public class HttpClientDownloader implements Downloader {
 
-    @Override
-    public void performDownload(int method, String path,
-            HashMap<String, String> header, HashMap<String, String> param,
-            String dir, String fileName, OnDownloadListener listener,
-            OnDownloadError error) {
+	@Override
+	public void performDownload(int method, String path,
+			HashMap<String, String> header, HashMap<String, String> param,
+			String dir, String fileName, OnDownloadListener listener,
+			OnDownloderSuccess successListener, OnDownloadError error) {
 
-        OutputStream out = null;
-        InputStream in = null;
+		OutputStream out = null;
+		InputStream in = null;
 
-        HttpClient httpClient = null;
-        HttpResponse response = null;
+		HttpClient httpClient = null;
+		HttpResponse response = null;
 
-        long totalLength = 0;
-        int currentLength = 0;
-        double progress;
+		long totalLength = 0;
+		int currentLength = 0;
+		double progress;
 
-        try {
+		try {
 
-            File dirFile = new File(dir);
+			File dirFile = new File(dir);
 
-            if (!dirFile.exists()) {
-                dirFile.mkdirs();
-            }
+			if (!dirFile.exists()) {
+				dirFile.mkdirs();
+			}
 
-            File file = new File(dir + File.separator + fileName);
+			File file = new File(dir + File.separator + fileName);
 
-            httpClient = new DefaultHttpClient();
-            httpClient.getParams().setParameter(
-                    CoreConnectionPNames.CONNECTION_TIMEOUT, 5000);
-            httpClient.getParams().setParameter(
-                    CoreConnectionPNames.SO_TIMEOUT, 5000);
+			httpClient = new DefaultHttpClient();
+			httpClient.getParams().setParameter(
+					CoreConnectionPNames.CONNECTION_TIMEOUT, 5000);
+			httpClient.getParams().setParameter(
+					CoreConnectionPNames.SO_TIMEOUT, 5000);
 
-            if (method == GET) {
+			if (method == GET) {
 
-                String sp = DownloaderUtil.formatRequestParam(param);
+				String sp = DownloaderUtil.formatRequestParam(param);
 
-                if (sp != null) {
-                    path = path + "?" + sp;
-                }
+				if (sp != null) {
+					path = path + "?" + sp;
+				}
 
-                HttpGet get = new HttpGet(path);
+				HttpGet get = new HttpGet(path);
 
-                if (header != null) {
+				if (header != null) {
 
-                    Set<String> set = header.keySet();
-                    for (String key : set) {
-                        get.addHeader(key, header.get(key));
-                    }
+					Set<String> set = header.keySet();
+					for (String key : set) {
+						get.addHeader(key, header.get(key));
+					}
 
-                }
-                response = httpClient.execute(get);
-            } else {
+				}
+				response = httpClient.execute(get);
+			} else {
 
-                HttpPost post = new HttpPost(path);
+				HttpPost post = new HttpPost(path);
 
-                if (header != null) {
+				if (header != null) {
 
-                    Set<String> set = header.keySet();
-                    for (String key : set) {
-                        post.addHeader(key, header.get(key));
-                    }
+					Set<String> set = header.keySet();
+					for (String key : set) {
+						post.addHeader(key, header.get(key));
+					}
 
-                }
+				}
 
-                if (param != null) {
+				if (param != null) {
 
-                    ArrayList<NameValuePair> pairs = new ArrayList<NameValuePair>();
+					ArrayList<NameValuePair> pairs = new ArrayList<NameValuePair>();
 
-                    Set<String> set = param.keySet();
+					Set<String> set = param.keySet();
 
-                    for (String key : set) {
-                        pairs.add(new BasicNameValuePair(key, param.get(key)));
-                    }
+					for (String key : set) {
+						pairs.add(new BasicNameValuePair(key, param.get(key)));
+					}
 
-                    UrlEncodedFormEntity formEntity = new UrlEncodedFormEntity(
-                            pairs);
+					UrlEncodedFormEntity formEntity = new UrlEncodedFormEntity(
+							pairs);
 
-                    post.setEntity(formEntity);
-                }
+					post.setEntity(formEntity);
+				}
 
-                response = httpClient.execute(post);
+				response = httpClient.execute(post);
 
-            }
+			}
 
-            if (response.getStatusLine().getStatusCode() == HttpStatus.SC_OK) {
+			if (response.getStatusLine().getStatusCode() == HttpStatus.SC_OK) {
 
-                HttpEntity entity = response.getEntity();
+				HttpEntity entity = response.getEntity();
 
-                in = entity.getContent();
-                totalLength = entity.getContentLength();
-                out = new FileOutputStream(file);
+				in = entity.getContent();
+				totalLength = entity.getContentLength();
+				out = new FileOutputStream(file);
 
-                int len = -1;
-                byte b[] = new byte[1024];
+				int len = -1;
+				byte b[] = new byte[1024];
 
-                while ((len = in.read(b)) > 0) {
+				while ((len = in.read(b)) > 0) {
 
-                    out.write(b, 0, len);
+					out.write(b, 0, len);
 
-                    if (listener != null) {
-                        currentLength = len + currentLength;
-                        progress = currentLength / (totalLength * 1.0);
-                        listener.progress(progress, path);
-                    }
-                }
-            }
+					if (listener != null) {
+						currentLength = len + currentLength;
+						progress = currentLength / (totalLength * 1.0);
+						listener.progress(progress, path);
+					}
+				}
 
-        } catch (ClientProtocolException e) {
-            e.printStackTrace();
-            if (error != null) {
-                error.Error(path, e.getMessage());
-            }
-        } catch (IOException e) {
-            e.printStackTrace();
-            if (error != null) {
-                error.Error(path, e.getMessage());
-            }
-        } finally {
+				successListener.completed(path);
+			} else {
+				error.Error(path, "œ¬‘ÿ ß∞‹");
+			}
 
-            try {
-                if (in != null) {
-                    in.close();
-                }
+		} catch (ClientProtocolException e) {
+			e.printStackTrace();
+			if (error != null) {
+				error.Error(path, e.getMessage());
+			}
+		} catch (IOException e) {
+			e.printStackTrace();
+			if (error != null) {
+				error.Error(path, e.getMessage());
+			}
+		} finally {
 
-                if (out != null) {
-                    out.close();
-                }
+			try {
+				if (in != null) {
+					in.close();
+				}
 
-                if (httpClient != null) {
-                    httpClient.getConnectionManager().shutdown();
-                }
-            } catch (IOException e) {
-                e.printStackTrace();
+				if (out != null) {
+					out.close();
+				}
 
-            }
+				if (httpClient != null) {
+					httpClient.getConnectionManager().shutdown();
+				}
+			} catch (IOException e) {
+				e.printStackTrace();
+				error.Error(path, e.getMessage());
 
-        }
+			}
 
-    }
+		}
+
+	}
 
 }

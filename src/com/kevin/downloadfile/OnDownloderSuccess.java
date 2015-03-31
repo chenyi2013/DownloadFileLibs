@@ -6,7 +6,8 @@ package com.kevin.downloadfile;
  * @data 2015/3/31
  * 
  */
-public interface OnDownloadError {
+public interface OnDownloderSuccess {
 
-	public void Error(String url, String error);
+	public void completed(String url);
+
 }
